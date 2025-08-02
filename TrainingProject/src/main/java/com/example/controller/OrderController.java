@@ -90,7 +90,7 @@ public class OrderController {
 		return ResponseEntity.ok(PaymentStatus.values());
 	}
 	
-	@DeleteMapping("/cancel-order/{orderId}")
+	@PostMapping("/cancel-order/{orderId}")
 	public ResponseEntity<ApiResponse<OrderProduct>> cancelOrder(@PathVariable Long orderId) {
 		return orderService.cancelOrder(orderId);
 	}

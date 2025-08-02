@@ -1,222 +1,224 @@
+
 package com.example.service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
 import com.example.authentication.CurrentUser;
 import com.example.controller.ApiResponse;
 import com.example.dto.GetOrders;
 import com.example.dto.PlaceOrder;
 import com.example.enums.OrderStatus;
 import com.example.enums.PaymentStatus;
-import com.example.exception.CustomException;
-import com.example.exception.ProductNotFoundException;
-import com.example.exception.UnAuthorizedException;
-import com.example.exception.UserNotFoundException;
+import com.example.exception.*;
 import com.example.model.*;
-import com.example.repo.AddressRepo;
-import com.example.repo.CartItemRepo;
-import com.example.repo.OrderItemRepo;
-import com.example.repo.OrderRepo;
-import com.example.repo.ProductRepo;
-import com.example.repo.UserRepo;
+import com.example.repo.*;
 
 import jakarta.transaction.Transactional;
 
 @Service
-public class OrderServiceImpl implements OrderService{
-	
-	
-	public OrderRepo orderRepo;
-	private UserRepo userRepo;
-	private ProductRepo productRepo;
-	private CartItemRepo cartItemRepo;
-	private AddressRepo addressRepo;
-	private CurrentUser currentUser;
-	private OrderItemRepo orderItemRepo;
-	
-	public OrderServiceImpl(UserRepo userRepo, OrderItemRepo orderItemRepo, CurrentUser currentUser, CartItemRepo cartItemRepo, ProductRepo productRepo, OrderRepo orderRepo, AddressRepo addressRepo) {
-		this.userRepo = userRepo;
-		this.cartItemRepo = cartItemRepo;
-		this.productRepo = productRepo;
-		this.orderRepo = orderRepo;
-		this.addressRepo = addressRepo;
-		this.currentUser = currentUser;
-		this.orderItemRepo = orderItemRepo;
-	}
+public class OrderServiceImpl implements OrderService {
 
-	@Transactional
-	public ResponseEntity<ApiResponse<List<GetOrders>>> placeOrder(List<PlaceOrder> orderDetailsList) {
+    private final OrderRepo orderRepo;
+    private final UserRepo userRepo;
+    private final ProductRepo productRepo;
+    private final CartItemRepo cartItemRepo;
+    private final AddressRepo addressRepo;
+    private final CurrentUser currentUser;
+    private final OrderItemRepo orderItemRepo;
 
-	    User currUser = currentUser.getUser();
-	    if (currUser == null) {
-	        throw new UnAuthorizedException("Please Login");
-	    }
+    public OrderServiceImpl(UserRepo userRepo, OrderItemRepo orderItemRepo, CurrentUser currentUser,
+                            CartItemRepo cartItemRepo, ProductRepo productRepo, OrderRepo orderRepo,
+                            AddressRepo addressRepo) {
+        this.userRepo = userRepo;
+        this.cartItemRepo = cartItemRepo;
+        this.productRepo = productRepo;
+        this.orderRepo = orderRepo;
+        this.addressRepo = addressRepo;
+        this.currentUser = currentUser;
+        this.orderItemRepo = orderItemRepo;
+    }
 
-	    List<GetOrders> placedOrderDTOs = new ArrayList<>();
+    @Transactional
+    public ResponseEntity<ApiResponse<List<GetOrders>>> placeOrder(List<PlaceOrder> orderDetailsList) {
+        User currUser = currentUser.getUser();
+        if (currUser == null) throw new UnAuthorizedException("Please Login");
 
-	    for (PlaceOrder orderDetails : orderDetailsList) {
+        List<GetOrders> placedOrderDTOs = new ArrayList<>();
 
-	        Optional<User> findUser = userRepo.findById(orderDetails.getUserId());
-	        Optional<Product> findProduct = productRepo.findById(orderDetails.getProductId());
-	        Optional<CartItem> cart = cartItemRepo.findByUserAndProduct(orderDetails.getUserId(), orderDetails.getProductId());
-	        Optional<Address> addressExists = addressRepo.findById(orderDetails.getAddressId());
+        Map<Long, List<PlaceOrder>> groupedOrders = orderDetailsList.stream()
+            .collect(Collectors.groupingBy(PlaceOrder::getAddressId));
 
-	        if (!findUser.isPresent()) {
-	            throw new UserNotFoundException("User Not Found");
-	        }
+        for (Map.Entry<Long, List<PlaceOrder>> entry : groupedOrders.entrySet()) {
+            Long addressId = entry.getKey();
+            List<PlaceOrder> group = entry.getValue();
 
-	        if (!currUser.getUserId().equals(orderDetails.getUserId())) {
-	            throw new UnAuthorizedException("Not Authorized to Place Order with Another User ID");
-	        }
+            Address address = addressRepo.findById(addressId)
+                .orElseThrow(() -> new CustomException("Address Not Found"));
 
-	        if (!findProduct.isPresent()) {
-	            throw new ProductNotFoundException("Product Not Available");
-	        }
+            if (!address.getUser().getUserId().equals(currUser.getUserId())) {
+                throw new CustomException("Address Not Matched");
+            }
 
-	        if (!cart.isPresent()) {
-	            throw new ProductNotFoundException("Please Add Product into Cart to place Order");
-	        }
+            List<OrderItem> orderItems = new ArrayList<>();
+            double totalPrice = 0;
 
-	        if (!addressExists.get().getUser().getUserId().equals(orderDetails.getUserId())) {
-	            throw new CustomException("Address Not Matched");
-	        }
+            OrderProduct order = new OrderProduct();
+            order.setUser(currUser);
+            order.setOrderDate(LocalDateTime.now());
+            order.setShippingAddress(address.getFullAddress());
+            order.setOrderStatus(OrderStatus.PENDING);
+            order.setPaymentStatus(PaymentStatus.PENDING);
 
-	        CartItem cartItem = cart.get();
-	        if (cartItem.getProductQuantity() < orderDetails.getQuantity()) {
-	            throw new CustomException("Selected Quantity is Greater Than Your Cart Quantity");
-	        }
+            for (PlaceOrder details : group) {
+                Product product = productRepo.findById(details.getProductId())
+                    .orElseThrow(() -> new ProductNotFoundException("Product Not Available"));
 
-	        List<PaymentInfo> payment = findUser.get().getPaymentDetails();
-	        if (payment == null || payment.isEmpty()) {
-	            throw new CustomException("Payment Method Cannot be Empty");
-	        }
+                CartItem cartItem = cartItemRepo.findByUserAndProduct(details.getUserId(), details.getProductId())
+                    .orElseThrow(() -> new ProductNotFoundException("Please Add Product into Cart to place Order"));
 
-	        boolean isValid = false;
-	        for (PaymentInfo info : payment) {
-	            if (info.getPaymentMethod() == orderDetails.getPaymentType()) {
-	                isValid = true;
-	                break;
-	            }
-	        }
+                if (!currUser.getUserId().equals(details.getUserId())) {
+                    throw new UnAuthorizedException("Not Authorized to Place Order with Another User ID");
+                }
 
-	        if (!isValid) {
-	            throw new UnAuthorizedException("Selected Payment Method Not Available. Available: "
-	                    + findUser.get().displayPayments());
-	        }
+                if (cartItem.getProductQuantity() < details.getQuantity()) {
+                    throw new CustomException("Selected Quantity is Greater Than Your Cart Quantity");
+                }
 
-	        // Create order
-	        OrderProduct order = new OrderProduct();
-	        OrderItem orderItem = new OrderItem();
-	        User user = findUser.get();
-	        Product product = findProduct.get();
-	        Address address = addressExists.get();
+                List<PaymentInfo> payment = currUser.getPaymentDetails();
+                if (payment == null || payment.isEmpty()) {
+                    throw new CustomException("Payment Method Cannot be Empty");
+                }
 
-	        order.setUser(user);
-	        order.setOrderDate(LocalDateTime.now());
-	        order.setShippingAddress(address.getFullAddress());
-	        order.setOrderStatus(OrderStatus.PENDING);
-	        order.setPaymentStatus(PaymentStatus.PENDING);
-	        order.setTotalPrice(orderDetails.getQuantity() * product.getProductPrice());
+                boolean isValid = payment.stream()
+                    .anyMatch(info -> info.getPaymentMethod() == details.getPaymentType());
 
-	        // Stock Checking
-	        int newStock = product.getProductQuantity() - orderDetails.getQuantity();
-	        if (newStock < 0) {
-	            throw new CustomException("Out Of Stock.");
-	        }
-	        product.setProductQuantity(newStock);
-	        productRepo.save(product);
+                if (!isValid) {
+                    throw new UnAuthorizedException("Selected Payment Method Not Available. Available: "
+                        + currUser.displayPayments());
+                }
 
-	        // Update cart
-	        int remainingQty = cartItem.getProductQuantity() - orderDetails.getQuantity();
-	        if (remainingQty <= 0) {
-	            cartItemRepo.delete(cartItem);
-	        } else {
-	            cartItem.setProductQuantity(remainingQty);
-	            cartItem.setTotalPrice(remainingQty * product.getProductPrice());
-	            cartItemRepo.save(cartItem);
-	        }
+                int newStock = product.getProductQuantity() - details.getQuantity();
+                if (newStock < 0) throw new CustomException("Out Of Stock.");
+                product.setProductQuantity(newStock);
+                productRepo.save(product);
 
-	        orderItem.setOrder(order);
-	        orderItem.setProduct(product);
-	        orderItem.setQuantity(orderDetails.getQuantity());
-	        order.setItems(List.of(orderItem));
-	        orderRepo.save(order);
+                int remainingQty = cartItem.getProductQuantity() - details.getQuantity();
+                if (remainingQty <= 0) {
+                    cartItemRepo.delete(cartItem);
+                } else {
+                    cartItem.setProductQuantity(remainingQty);
+                    cartItem.setTotalPrice(remainingQty * product.getProductPrice());
+                    cartItemRepo.save(cartItem);
+                }
 
-	        // Map to DTO
-	        placedOrderDTOs.add(new GetOrders(order, orderItem));
-	    }
+                OrderItem orderItem = new OrderItem();
+                orderItem.setOrder(order);
+                orderItem.setProduct(product);
+                orderItem.setQuantity(details.getQuantity());
 
-	    ApiResponse<List<GetOrders>> response = new ApiResponse<>();
-	    response.setData(placedOrderDTOs);
-	    response.setMessage("Orders Placed Successfully");
+                orderItems.add(orderItem);
+                totalPrice += details.getQuantity() * product.getProductPrice();
+            }
 
-	    return ResponseEntity.ok(response);
-	}
+            order.setItems(orderItems);
+            order.setTotalPrice(totalPrice);
+            orderRepo.save(order);
 
-	public ResponseEntity<List<GetOrders>> getOrderByUser(Long userId) {
-	    User currUser = currentUser.getUser();
-	    if (currUser == null) {
-	        throw new UnAuthorizedException("Please Login");
-	    }
+            placedOrderDTOs.add(new GetOrders(order, orderItems));
+        }
 
-	    if (!userRepo.findById(userId).isPresent()) {
-	        throw new UserNotFoundException("User Not Found");
-	    }
+        ApiResponse<List<GetOrders>> response = new ApiResponse<>();
+        response.setData(placedOrderDTOs);
+        response.setMessage("Orders Placed Successfully");
 
-	    List<OrderProduct> orders = orderRepo.findByUser(userId);
-	    if (orders.isEmpty()) {
-	        throw new UserNotFoundException("No Order Details Found with Given User ID");
-	    }
+        return ResponseEntity.ok(response);
+    }
 
-	    List<GetOrders> dtoList = new ArrayList<>();
-	    for (OrderProduct order : orders) {
-	        for (OrderItem item : order.getItems()) {
-	            dtoList.add(new GetOrders(order, item));
-	        }
-	    }
+    public ResponseEntity<List<GetOrders>> getOrderByUser(Long userId) {
+        User currUser = currentUser.getUser();
+        if (currUser == null) throw new UnAuthorizedException("Please Login");
 
-	    return ResponseEntity.ok(dtoList);
-	}
+        if (!userRepo.findById(userId).isPresent()) {
+            throw new UserNotFoundException("User Not Found");
+        }
 
+        List<OrderProduct> orders = orderRepo.findByUser(userId);
+        if (orders.isEmpty()) {
+            throw new UserNotFoundException("No Order Details Found with Given User ID");
+        }
 
-	@Transactional
-	public ResponseEntity<ApiResponse<OrderProduct>> cancelOrder(Long orderId) {
+        List<GetOrders> dtoList = new ArrayList<>();
+        for (OrderProduct order : orders) {
+            dtoList.add(new GetOrders(order, order.getItems()));
+        }
 
-		Optional<OrderProduct> exists = orderRepo.findById(orderId);
-		Optional<OrderItem> items  = orderItemRepo.findByOrder_OrderId(orderId);
-	    User currUser = currentUser.getUser();
-		if(currUser == null) {
-			throw new UnAuthorizedException("Please Login");
-		}
-		if(currUser.getUserId()!= currUser.getUserId()) {
-			throw new UnAuthorizedException("Not Authorized to Cancel Order With Another Account");
-		}
+        return ResponseEntity.ok(dtoList);
+    }
 
-	    OrderProduct order = exists.get();
+    @Transactional
+    public ResponseEntity<ApiResponse<OrderProduct>> cancelOrder(Long orderId) {
+        User currUser = currentUser.getUser();
+        if (currUser == null) throw new UnAuthorizedException("Please Login");
 
-	    Optional<Product> productExists = productRepo.findById(items.get().getProduct().getProductId());
+        OrderProduct order = orderRepo.findById(orderId)
+            .orElseThrow(() -> new CustomException("Order Not Found"));
 
-	    if(exists.get().getOrderStatus() != OrderStatus.DELIVERED) {
-	    	throw new CustomException("Order is Delivered");
-	    }
-	    Product product = productExists.get();
-	    product.setProductQuantity(product.getProductQuantity() + items.get().getQuantity());
-	    productRepo.save(product);
-	    order.setOrderStatus(OrderStatus.CANCELLED);
-	    order.setPaymentStatus(PaymentStatus.REFUND_INITIATED);
-	    orderRepo.save(order);
+        if (!order.getUser().getUserId().equals(currUser.getUserId())) {
+            throw new UnAuthorizedException("Not Authorized to Cancel This Order");
+        }
 
-	    ApiResponse<OrderProduct> response = new ApiResponse<>();
-	    response.setMessage("Order cancelled successfully");
-	    return ResponseEntity.ok(response);
-	}
+        if (order.getOrderStatus() == OrderStatus.DELIVERED) {
+            throw new CustomException("Order is Delivered");
+        }
 
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            product.setProductQuantity(product.getProductQuantity() + item.getQuantity());
+            productRepo.save(product);
+        }
 
+        order.setOrderStatus(OrderStatus.CANCELLED);
+        order.setOrderDate(LocalDateTime.now());
+        order.setPaymentStatus(PaymentStatus.REFUND_INITIATED);
+        orderRepo.save(order);
+
+        ApiResponse<OrderProduct> response = new ApiResponse<>();
+        response.setMessage("Order cancelled successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<ApiResponse<List<GetOrders>>> getAllOrders() {
+        List<OrderProduct> orderList = orderRepo.findAll();
+        if (orderList.isEmpty()) throw new CustomException("No Order Found");
+
+        List<GetOrders> dtoList = new ArrayList<>();
+        for (OrderProduct order : orderList) {
+            dtoList.add(new GetOrders(order, order.getItems()));
+        }
+
+        ApiResponse<List<GetOrders>> response = new ApiResponse<>();
+        response.setData(dtoList);
+        response.setMessage("All Orders Details");
+
+        return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<List<GetOrders>> getByOrderId(Long orderId) {
+        User currUser = currentUser.getUser();
+        if (currUser == null) throw new UnAuthorizedException("Please Login");
+
+        OrderProduct order = orderRepo.findById(orderId)
+            .orElseThrow(() -> new UserNotFoundException("Order Not Found with Given ID"));
+
+        return ResponseEntity.ok(List.of(new GetOrders(order, order.getItems())));
+    }
+    
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getByUserIdAndProductId(Long userId, Long productId) {
 		
 		User currUser = currentUser.getUser();
@@ -232,27 +234,6 @@ public class OrderServiceImpl implements OrderService{
 		return ResponseEntity.ok(response);
 	}
 
-	public ResponseEntity<ApiResponse<List<GetOrders>>> getAllOrders() {
-	    List<OrderProduct> orderList = orderRepo.findAll();
-
-	    if (orderList.isEmpty()) {
-	        throw new CustomException("No Order Found");
-	    }
-
-	    List<GetOrders> dtoList = new ArrayList<>();
-
-	    for (OrderProduct order : orderList) {
-	        for (OrderItem item : order.getItems()) {
-	            dtoList.add(new GetOrders(order, item));
-	        }
-	    }
-
-	    ApiResponse<List<GetOrders>> response = new ApiResponse<>();
-	    response.setData(dtoList);
-	    response.setMessage("All Orders Details");
-
-	    return ResponseEntity.ok(response);
-	}
 
 
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrderStatus(OrderStatus status) {
@@ -292,27 +273,6 @@ public class OrderServiceImpl implements OrderService{
 		return ResponseEntity.ok(response);
 	}
 
-
-	public ResponseEntity<List<GetOrders>> getByOrderId(Long orderId) {
-		User currUser = currentUser.getUser();
-	    if (currUser == null) {
-	        throw new UnAuthorizedException("Please Login");
-	    }
-
-	    Optional<OrderProduct> optionalOrder = orderRepo.findById(orderId);
-	    if (!optionalOrder.isPresent()) {
-	        throw new UserNotFoundException("Order Not Found with Given ID");
-	    }
-
-	    OrderProduct order = optionalOrder.get();
-
-	    List<GetOrders> dtoList = new ArrayList<>();
-	    for (OrderItem item : order.getItems()) {
-	        dtoList.add(new GetOrders(order, item));
-	    }
-
-	    return ResponseEntity.ok(dtoList);
-	}
 
 	public ResponseEntity<ApiResponse<OrderProduct>> updatePaymentStatus(Long orderId, PaymentStatus status) {
 		
