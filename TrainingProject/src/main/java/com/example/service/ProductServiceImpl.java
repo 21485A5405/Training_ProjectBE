@@ -5,10 +5,14 @@ import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.example.authentication.CurrentUser;
 import com.example.controller.ApiResponse;
+import com.example.enums.Role;
 import com.example.exception.CustomException;
 import com.example.exception.ProductNotFoundException;
+import com.example.exception.UnAuthorizedException;
 import com.example.model.Product;
+import com.example.model.User;
 import com.example.repo.CartItemRepo;
 import com.example.repo.OrderItemRepo;
 import com.example.repo.OrderRepo;
@@ -24,13 +28,16 @@ public class ProductServiceImpl implements ProductService{
 	private CartItemRepo cartItemRepo;
 	private OrderRepo orderRepo;
 	private OrderItemRepo orderItemRepo;
+	private CurrentUser currentUser;
 	
 	
-	public ProductServiceImpl(ProductRepo productRepo, OrderItemRepo orderItemRepo, CartItemRepo cartItemRepo, OrderRepo orderRepo) {
+	public ProductServiceImpl(ProductRepo productRepo, OrderItemRepo orderItemRepo,
+			CartItemRepo cartItemRepo, OrderRepo orderRepo, CurrentUser currentUser) {
 		this.productRepo = productRepo;
 		this.cartItemRepo = cartItemRepo;
 		this.orderRepo = orderRepo;
 		this.orderItemRepo = orderItemRepo;
+		this.currentUser = currentUser;
 	}
 
 	public ResponseEntity<ApiResponse<Product>> saveProduct(Product product) {
@@ -61,24 +68,28 @@ public class ProductServiceImpl implements ProductService{
 	@Transactional
 	public ResponseEntity<ApiResponse<Product>> productUpdate(Long productId, Product newProduct) {
 		
+		User currUser = currentUser.getUser();
 		Optional<Product> exists= productRepo.findById(productId);
 		
 		if(!exists.isPresent()) {
 			throw new ProductNotFoundException("Product Not Found");
 		}
+		if(currUser.getUserRole()!=Role.ADMIN) {
+			throw new UnAuthorizedException("Not AUthorized");
+		}
 		
-			Product product = exists.get();
-			product.setProductName(newProduct.getProductName());
-			product.setProductPrice(newProduct.getProductPrice());
-			product.setProductQuantity(newProduct.getProductQuantity());
-			product.setProductCategory(newProduct.getProductCategory());
-			product.setProductImageURL(newProduct.getProductImageURL());
-			
-			productRepo.save(product);
-			ApiResponse<Product> response = new ApiResponse<>();
-			response.setData(product);
-			response.setMessage("Product Updated Successfully");
+		Product product = exists.get();
+		product.setProductName(newProduct.getProductName());
+		product.setProductPrice(newProduct.getProductPrice());
+		product.setProductQuantity(newProduct.getProductQuantity());
+		product.setProductCategory(newProduct.getProductCategory());
+		product.setProductImageURL(newProduct.getProductImageURL());
 		
+		productRepo.save(product);
+		ApiResponse<Product> response = new ApiResponse<>();
+		response.setData(product);
+		response.setMessage("Product Updated Successfully");
+	
 		return ResponseEntity.ok(response);
 	}
 
@@ -98,18 +109,23 @@ public class ProductServiceImpl implements ProductService{
 	@Transactional
 	public ResponseEntity<ApiResponse<Product>> deleteById(Long productId) {
 		
-		Optional<Product> exists = productRepo.findById(productId);
+		User currUser = currentUser.getUser();
+		Optional<Product> exists= productRepo.findById(productId);
+		
 		if(!exists.isPresent()) {
 			throw new ProductNotFoundException("Product Not Found");
-			
 		}
-			cartItemRepo.deleteById(productId);
-			orderRepo.deleteById(productId);
-			orderItemRepo.deleteAllByProductId(productId);
-			productRepo.deleteById(productId);
-			ApiResponse<Product> response = new ApiResponse<>();
-			response.setMessage("Product Deleted Successfully");
-			return ResponseEntity.ok(response);
+		if(currUser.getUserRole()!=Role.ADMIN) {
+			throw new UnAuthorizedException("Not AUthorized");
+		}
+		
+		cartItemRepo.deleteById(productId);
+		orderRepo.deleteById(productId);
+		orderItemRepo.deleteAllByProductId(productId);
+		productRepo.deleteById(productId);
+		ApiResponse<Product> response = new ApiResponse<>();
+		response.setMessage("Product Deleted Successfully");
+		return ResponseEntity.ok(response);
 	}
 
 	public ResponseEntity<ApiResponse<List<Product>>> getProductByCategory(String category) {

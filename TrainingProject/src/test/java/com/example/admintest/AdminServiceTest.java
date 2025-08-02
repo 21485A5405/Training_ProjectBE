@@ -21,13 +21,10 @@ import org.springframework.http.ResponseEntity;
 
 import com.example.authentication.CurrentUser;
 import com.example.controller.ApiResponse;
-import com.example.dto.RegisterAdmin;
-import com.example.dto.UpdateUser;
-import com.example.enums.AdminPermissions;
+import com.example.dto.RegisterUser;
 import com.example.enums.Role;
 import com.example.exception.CustomException;
 import com.example.exception.UnAuthorizedException;
-import com.example.model.Address;
 import com.example.model.OrderProduct;
 import com.example.model.PaymentInfo;
 import com.example.model.PaymentMethod;
@@ -51,7 +48,7 @@ public class AdminServiceTest {
 	
 	@Test
 	void testCreateAdmin() {
-	    RegisterAdmin dto = new RegisterAdmin();
+	    RegisterUser dto = new RegisterUser();
 	    dto.setUserEmail("new@admin.com");
 	    dto.setUserName("New Admin");
 	    dto.setUserPassword("password");
@@ -60,7 +57,6 @@ public class AdminServiceTest {
 	    paymentInfo.setAccountDetails("XXXX-XXXX-XXXX-1234");
 	    List<PaymentInfo> list = new ArrayList<>();
 	    list.add(paymentInfo);
-	    dto.setUserPermissions(Set.of(AdminPermissions.User_Manager));
 
 	    when(userRepo.findByUserEmail("new@admin.com")).thenReturn(Optional.empty());
 
@@ -75,7 +71,6 @@ public class AdminServiceTest {
 	    User current = new User();
 	    current.setUserId(1L);
 	    current.setUserRole(Role.ADMIN);
-	    current.setUserPermissions(Set.of(AdminPermissions.User_Manager));
 
 	    User found = new User();
 	    found.setUserId(1L);
@@ -145,7 +140,6 @@ public class AdminServiceTest {
 	    User current = new User();
 	    current.setUserId(1L);
 	    current.setUserRole(Role.ADMIN);
-	    current.setUserPermissions(Set.of(AdminPermissions.Manager));
 
 	    User admin = new User();
 	    admin.setUserRole(Role.ADMIN);
@@ -167,7 +161,6 @@ public class AdminServiceTest {
 	    User current = new User();
 	    current.setUserId(1L);
 	    current.setUserRole(Role.ADMIN);
-	    current.setUserPermissions(Set.of(AdminPermissions.Order_Manager, AdminPermissions.Manager));
 
 	    OrderProduct order = new OrderProduct();
 
@@ -182,7 +175,7 @@ public class AdminServiceTest {
 
 	@Test
 	void testWhenAdminAlreadyExists() {
-	    RegisterAdmin dto = new RegisterAdmin();
+	    RegisterUser dto = new RegisterUser();
 	    dto.setUserEmail("admin@cognizant.com");
 
 	    when(userRepo.findByUserEmail("admin@cognizant.com")).thenReturn(Optional.of(new User()));

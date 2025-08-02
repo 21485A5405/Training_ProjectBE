@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.customannotations.ForOrders;
 import com.example.dto.GetOrders;
 import com.example.dto.PlaceOrder;
-import com.example.enums.AdminPermissions;
 import com.example.enums.OrderStatus;
 import com.example.enums.PaymentStatus;
 import com.example.enums.Role;
@@ -57,31 +56,31 @@ public class OrderController {
 	}
 	
 	@GetMapping("/get-by-orderstatus/{status}")
-	@ForOrders(validPermissions = {AdminPermissions.Manager,AdminPermissions.Order_Manager},requiredRole = Role.ADMIN)
+	@ForOrders(requiredRole = Role.ADMIN)
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrders(@PathVariable OrderStatus status) {
 		return orderService.getOrderStatus(status);
 	}
 	
 	@GetMapping("/get-by-paymentstatus/{paymentStatus}")	
-	@ForOrders(validPermissions = {AdminPermissions.Manager,AdminPermissions.Order_Manager},requiredRole = Role.ADMIN)
+	@ForOrders(requiredRole = Role.ADMIN)
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrder(@PathVariable PaymentStatus paymentStatus) {
 		return orderService.getOrderByPayment(paymentStatus);
 	}
 	
 	@GetMapping("/get-all")
-	@ForOrders(validPermissions = {AdminPermissions.Manager,AdminPermissions.Order_Manager},requiredRole = Role.ADMIN)
+	@ForOrders(requiredRole = Role.ADMIN)
 	public ResponseEntity<ApiResponse<List<GetOrders>>> getAll() {
 		return orderService.getAllOrders();
 	}
 	
 	@PutMapping("update-orderstatus/{orderId}/{status}")
-	@ForOrders(validPermissions = {AdminPermissions.Manager,AdminPermissions.Order_Manager},requiredRole = Role.ADMIN)
+	@ForOrders(requiredRole = Role.ADMIN)
 	public ResponseEntity<ApiResponse<OrderProduct>> updateOrderStatus(@PathVariable Long orderId, @PathVariable OrderStatus status) {
 		return orderService.updateOrderStatus(orderId, status);
 	}
 	
 	@PutMapping("update-paymentstatus/{orderId}/{status}")
-	@ForOrders(validPermissions = {AdminPermissions.Manager,AdminPermissions.Order_Manager},requiredRole = Role.ADMIN)
+	@ForOrders(requiredRole = Role.ADMIN)
 	public ResponseEntity<ApiResponse<OrderProduct>> updatePaymentStatus(@PathVariable Long orderId, @PathVariable PaymentStatus status) {
 		return orderService.updatePaymentStatus(orderId, status);
 	}

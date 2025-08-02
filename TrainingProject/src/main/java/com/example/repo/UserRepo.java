@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import com.example.enums.Role;
 import com.example.model.PaymentInfo;
-import com.example.model.PaymentMethod;
 import com.example.model.User;
 
 @Repository
@@ -22,10 +21,7 @@ public interface UserRepo extends JpaRepository<User, Long> {
     List<Long> getAllUserIds();
 	
 	Optional<User> findByUserRole(Role role);
-	
-	@Query("SELECT u FROM User u LEFT JOIN FETCH u.userPermissions WHERE u.id = :id")
-	Optional<User> findByIdWithPermissions(@Param("id") Long id);
-	
+
 	@Query("SELECT u.paymentDetails FROM User u WHERE u.userId = :userId")
 	List<PaymentInfo> findPaymentDetailsByUserId(@Param("userId") Long userId);
 

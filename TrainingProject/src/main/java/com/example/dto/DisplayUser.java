@@ -1,16 +1,12 @@
 package com.example.dto;
 
-import org.springframework.beans.factory.annotation.Autowired;
-
 import com.example.model.User;
-import com.example.model.UserToken;
 
 public class DisplayUser {
 	
 	private Long userId;
 	private String userName;
 	private String userEmail;
-	private String userToken;
 	
 	
 	    public DisplayUser(User user) {

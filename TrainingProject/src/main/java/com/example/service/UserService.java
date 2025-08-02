@@ -1,6 +1,7 @@
 package com.example.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.ResponseEntity;
@@ -11,7 +12,6 @@ import com.example.dto.LoginDetails;
 import com.example.dto.LoginDisplay;
 import com.example.dto.RegisterUser;
 import com.example.dto.UpdateUser;
-import com.example.enums.AdminPermissions;
 import com.example.model.Address;
 import com.example.model.PaymentInfo;
 import com.example.model.PaymentMethod;
@@ -31,7 +31,7 @@ public interface UserService {
 
 	public ResponseEntity<LoginDisplay> loginUser(LoginDetails details);
 
-	public ResponseEntity<ApiResponse<User>> updateUserRole(Set<AdminPermissions> permissions, Long userId);
+	public ResponseEntity<ApiResponse<User>> updateUserRole(Long userId);
 
 	public ResponseEntity<String> logOut();
 
@@ -43,7 +43,7 @@ public interface UserService {
 
 	public ResponseEntity<String> updateAddress(Long addressId, String address);
 
-	public List<PaymentMethod> getPayment(Long userId);
+	public List<Map<PaymentMethod,String>> getPayment(Long userId);
 
 	public List<PaymentInfo> getPayments(Long userId);
 

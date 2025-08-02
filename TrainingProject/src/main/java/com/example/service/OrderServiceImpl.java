@@ -7,15 +7,12 @@ import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-
-import com.example.advicemethods.IsAuthorized;
 import com.example.authentication.CurrentUser;
 import com.example.controller.ApiResponse;
 import com.example.dto.GetOrders;
 import com.example.dto.PlaceOrder;
 import com.example.enums.OrderStatus;
 import com.example.enums.PaymentStatus;
-import com.example.enums.Role;
 import com.example.exception.CustomException;
 import com.example.exception.ProductNotFoundException;
 import com.example.exception.UnAuthorizedException;
@@ -171,18 +168,6 @@ public class OrderServiceImpl implements OrderService{
 	        throw new UserNotFoundException("User Not Found");
 	    }
 
-	    boolean isSelf = currUser.getUserId().equals(userId);
-	    boolean isManager = IsAuthorized.isManager(currUser.getUserPermissions());
-	    boolean isOrderManager = IsAuthorized.isOrderManager(currUser.getUserPermissions());
-
-	    if (!isSelf && !(isManager || isOrderManager)) {
-	        throw new UnAuthorizedException("Not Authorized to View This User's Order Details");
-	    }
-
-	    if (currUser.getUserRole() == Role.ADMIN && !(isManager || isOrderManager)) {
-	        throw new UnAuthorizedException("You don't have rights to view order details");
-	    }
-
 	    List<OrderProduct> orders = orderRepo.findByUser(userId);
 	    if (orders.isEmpty()) {
 	        throw new UserNotFoundException("No Order Details Found with Given User ID");
@@ -216,6 +201,9 @@ public class OrderServiceImpl implements OrderService{
 
 	    Optional<Product> productExists = productRepo.findById(items.get().getProduct().getProductId());
 
+	    if(exists.get().getOrderStatus() != OrderStatus.DELIVERED) {
+	    	throw new CustomException("Order is Delivered");
+	    }
 	    Product product = productExists.get();
 	    product.setProductQuantity(product.getProductQuantity() + items.get().getQuantity());
 	    productRepo.save(product);
@@ -235,21 +223,9 @@ public class OrderServiceImpl implements OrderService{
 		if(currUser == null) {
 			throw new UnAuthorizedException("Please Login");
 		}
-		boolean isSelf = currUser.getUserId().equals(userId);
-		boolean isManager = IsAuthorized.isManager(currUser.getUserPermissions());
-		boolean isOrderManager = IsAuthorized.isOrderManager(currUser.getUserPermissions());
 		ApiResponse<List<OrderProduct>> response = new ApiResponse<>();
 		List<OrderProduct> orders = orderRepo.findAllByUserAndProduct(userId, productId);
-		if(isSelf || (isManager || isOrderManager)) {
-			response.setData(orders);
-			response.setMessage("User "+userId+" Orders Details");
-		}
-		else if (!isSelf && !(isManager || isOrderManager)) {
-		    throw new UnAuthorizedException("Not Authorized to View This User's Order Details");
-		}
-		else if (currUser.getUserRole() == Role.ADMIN && !(isManager || isOrderManager)) {
-		    throw new UnAuthorizedException("You don't have rights to view order details");
-		}
+
 		if(orders.isEmpty()) {
 			throw new ProductNotFoundException("Orders Not Found With This UserID "+userId+" and ProductID "+productId);
 		}
@@ -329,19 +305,6 @@ public class OrderServiceImpl implements OrderService{
 	    }
 
 	    OrderProduct order = optionalOrder.get();
-	    Long orderUserId = order.getUser().getUserId();
-
-	    boolean isSelf = currUser.getUserId().equals(orderUserId);
-	    boolean isManager = IsAuthorized.isManager(currUser.getUserPermissions());
-	    boolean isOrderManager = IsAuthorized.isOrderManager(currUser.getUserPermissions());
-
-	    if (!isSelf && !(isManager || isOrderManager)) {
-	        throw new UnAuthorizedException("Not Authorized to View This Order");
-	    }
-
-	    if (currUser.getUserRole() == Role.ADMIN && !(isManager || isOrderManager)) {
-	        throw new UnAuthorizedException("You don't have rights to view order details");
-	    }
 
 	    List<GetOrders> dtoList = new ArrayList<>();
 	    for (OrderItem item : order.getItems()) {

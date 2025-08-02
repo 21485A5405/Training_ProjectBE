@@ -1,6 +1,7 @@
 package com.example.controller;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.customannotations.ForUser;
 import com.example.dto.DisplayUser;
@@ -17,12 +19,12 @@ import com.example.dto.LoginDetails;
 import com.example.dto.LoginDisplay;
 import com.example.dto.RegisterUser;
 import com.example.dto.UpdateUser;
-import com.example.enums.AdminPermissions;
 import com.example.enums.Role;
 import com.example.model.Address;
 import com.example.model.PaymentInfo;
 import com.example.model.PaymentMethod;
 import com.example.model.User;
+import com.example.repo.UserRepo;
 import com.example.service.UserService;
 
 import jakarta.validation.Valid;
@@ -32,9 +34,11 @@ import jakarta.validation.Valid;
 public class UserController {
 	
 	private UserService userService;
+	private UserRepo userRepo;
 	
-	public UserController(UserService userService) {
+	public UserController(UserService userService, UserRepo userRepo) {
 		this.userService = userService;
+		this.userRepo = userRepo;
 		
 	}
 	
@@ -65,15 +69,24 @@ public class UserController {
 	
 	@DeleteMapping("/delete-user-by-id/{userId}")
 	public ResponseEntity<ApiResponse<User>> deleteUser(@PathVariable Long userId) {
-		return userService.deleteUserById(userId);
-		
+		return userService.deleteUserById(userId);	
 	}
 	
+	@GetMapping("/check-email")
+	public ResponseEntity<Boolean> checkEmailExists(@RequestParam String email) {
+	    Optional<User> exists = userRepo.findByUserEmail(email);
+	    if(exists.isPresent()) {
+	    	return ResponseEntity.ok(true);
+	    }
+	    return ResponseEntity.ok(false);
+	}
+
+	
 	@PutMapping("/update-user-role/{userId}")
-	@ForUser(validPermissions = {AdminPermissions.Manager, AdminPermissions.User_Manager},requiredRole = Role.ADMIN, isSelfUser = false)
-	public ResponseEntity<ApiResponse<User>> updateRole(@RequestBody Set<AdminPermissions> permissions, @PathVariable Long userId) {
+	@ForUser(requiredRole = Role.ADMIN, isSelfUser = false)
+	public ResponseEntity<ApiResponse<User>> updateRole(@PathVariable Long userId) {
 		
-		return userService.updateUserRole(permissions, userId);
+		return userService.updateUserRole(userId);
 	}
 	
 	@GetMapping("/get-address/{userId}")
@@ -82,7 +95,7 @@ public class UserController {
 	}
 	
 	@GetMapping("/get-user-payment/{userId}")
-	public List<PaymentMethod> getPayment(@PathVariable Long userId) {
+	public List<Map<PaymentMethod, String>> getPayment(@PathVariable Long userId) {
 		return userService.getPayment(userId);
 	}
 	

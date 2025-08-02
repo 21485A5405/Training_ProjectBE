@@ -2,8 +2,10 @@ package com.example.service;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -22,7 +24,6 @@ import com.example.dto.LoginDetails;
 import com.example.dto.LoginDisplay;
 import com.example.dto.RegisterUser;
 import com.example.dto.UpdateUser;
-import com.example.enums.AdminPermissions;
 import com.example.enums.Role;
 import com.example.exception.CustomException;
 import com.example.exception.UnAuthorizedException;
@@ -109,14 +110,6 @@ public class UserServiceImpl implements UserService{
 		
 		oldUser.setUserName(newUser.getUserName());
 		oldUser.setUserEmail(newUser.getUserEmail());
-		
-//		 List<Address> existingAddresses = newUser.getShippingAddress();
-//		    existingAddresses.clear();
-//		    for (Address address : newUser.getShippingAddress()) {
-//		        address.setUser(oldUser); // maintain bidirectional link
-//		        existingAddresses.add(address);
-//		    }
-//		oldUser.setPaymentDetails(newUser.getPaymentDetails());
 
 		userRepo.save(oldUser);
 		UpdateUser res = new UpdateUser(oldUser);
@@ -140,12 +133,10 @@ public class UserServiceImpl implements UserService{
 		if(currUser.getUserId()!= userId && currUser.getUserRole() != Role.ADMIN) {
 			throw new UnAuthorizedException("Not Allowed to Get Another User Details");
 		}
-		boolean isManager = IsAuthorized.isUserManager(currUser.getUserPermissions());
-		boolean isUserManager = IsAuthorized.isManager(currUser.getUserPermissions());
 		boolean isAdmin = IsAuthorized.isAdmin(currUser.getUserRole());
 		
-		if ( isAdmin && !(isUserManager) || isManager ) {
-				throw new UnAuthorizedException("Only Manager and User_Manager have Right To User Details");
+		if ( isAdmin) {
+				throw new UnAuthorizedException("Not Authorized");
 			}
 		
 		if(exists.get().getUserRole() == Role.ADMIN) {
@@ -248,14 +239,13 @@ public class UserServiceImpl implements UserService{
 	}
 	
 	@Transactional
-	public ResponseEntity<ApiResponse<User>> updateUserRole(Set<AdminPermissions> permissions, Long userId) {
+	public ResponseEntity<ApiResponse<User>> updateUserRole(Long userId) {
 		
 		Optional<User> exists = userRepo.findById(userId);
 		if(!exists.isPresent()) {
 			throw new UserNotFoundException("User Not Found");
 		}
 		exists.get().setUserRole(Role.ADMIN);
-		exists.get().setUserPermissions(new HashSet<>(permissions));
 		
 		userRepo.save(exists.get());
 		ApiResponse<User> response = new ApiResponse<>();
@@ -314,16 +304,20 @@ public class UserServiceImpl implements UserService{
 		return ResponseEntity.ok("Updated Successfully");
 	}
 
-	public List<PaymentMethod> getPayment(Long userId) {
-		
-		List<PaymentInfo> payments = userRepo.findPaymentDetailsByUserId(userId);
+	public List<Map<PaymentMethod, String>> getPayment(Long userId) {
+	    List<PaymentInfo> payments = userRepo.findPaymentDetailsByUserId(userId);
+
 	    return payments.stream()
-	    				.filter(Objects::nonNull)
-	    				.filter(p -> p.getPaymentMethod() != null)
-	                   .map(PaymentInfo::getPaymentMethod)
-	                   .collect(Collectors.toList());
-		
+	        .filter(Objects::nonNull)
+	        .filter(p -> p.getPaymentMethod() != null && p.getAccountDetails() != null)
+	        .map(p -> {
+	            Map<PaymentMethod, String> map = new HashMap<>();
+	            map.put(p.getPaymentMethod(), p.getAccountDetails());
+	            return map;
+	        })
+	        .collect(Collectors.toList());
 	}
+
 
 	public List<PaymentInfo> getPayments(Long userId) {
 	    return Optional.ofNullable(userRepo.findPaymentDetailsByUserId(userId))

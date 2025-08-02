@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import com.example.controller.ApiResponse;
 import com.example.dto.LoginDetails;
 import com.example.dto.LoginDisplay;
-import com.example.dto.RegisterAdmin;
+import com.example.dto.RegisterUser;
 import com.example.dto.UpdateUser;
 import com.example.model.OrderProduct;
 import com.example.model.Product;
@@ -14,11 +14,10 @@ import com.example.model.User;
 
 public interface AdminService {
 	
-	public ResponseEntity<ApiResponse<User>> createAdmin(RegisterAdmin admin) ;
+	public ResponseEntity<ApiResponse<User>> createAdmin(RegisterUser admin) ;
 
 	public ResponseEntity<ApiResponse<User>> getAdminById(Long adminId);
 
-	public ResponseEntity<ApiResponse<UpdateUser>> updateAdminById(Long adminId, UpdateUser newAdmin);
 
 	public ResponseEntity<ApiResponse<User>> deleteAdminById(Long adminId);
 
