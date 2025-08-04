@@ -138,9 +138,7 @@ public class AdminServiceImpl implements AdminService{
 			throw new UnAuthorizedException("Please Login");
 		}
 		for(User users :list) {
-			if(users.getUserRole() == Role.ADMIN) {
 				admins.add(users);
-			}
 		}
 		ApiResponse<List<User>> response = new ApiResponse<>();
 		response.setMessage("List Of Admins");

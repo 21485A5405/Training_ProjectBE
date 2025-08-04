@@ -34,13 +34,16 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     		String path = request.getRequestURI();
  
           
-    		if (path.equals("/users/register-user") || path.equals("/orders/get-payments")|| path.equals("/orders/get-orderstatus") || path.equals("/users/get-payment-details") || path.equals("/products/getall") || path.equals("/users/login-user") || path.equals("/admins/login-admin")) {
+    		if (path.equals("/users/register-user") || path.equals("/orders/get-payments")||
+    				path.equals("/orders/get-orderstatus") 
+    				|| path.equals("/users/get-payment-details") || path.equals("/products/getall") 
+    				|| path.equals("/users/login-user") || path.equals("/admins/login-admin")) {
                 filterChain.doFilter(request, response);
                 return;
             }
 	        String token = request.getHeader("Authorization");
 	        System.out.println("Token received: " + token);
-	        System.out.println();
+	        
 	        if (token != null && !token.isBlank()) {
 	            UserToken userToken =  userTokenRepo.findByUserToken(token)
 	                .orElseThrow(() -> new UnAuthorizedException("Token Not Found / Token is Expired"));

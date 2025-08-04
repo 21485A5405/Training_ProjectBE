@@ -50,11 +50,6 @@ public class OrderController {
 		return orderService.getByOrderId(orderId);
 	}
 	
-	@GetMapping("/get-order/{userId}/{productId}")
-	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrderDetails(@PathVariable Long userId, @PathVariable Long productId) {
-		return orderService.getByUserIdAndProductId(userId, productId);
-	}
-	
 	@GetMapping("/get-by-orderstatus/{status}")
 	@ForOrders(requiredRole = Role.ADMIN)
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrders(@PathVariable OrderStatus status) {

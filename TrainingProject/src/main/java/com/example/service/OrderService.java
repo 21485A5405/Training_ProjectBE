@@ -17,8 +17,6 @@ public interface OrderService {
 
 	public ResponseEntity<ApiResponse<OrderProduct>> cancelOrder(Long orderId);
 
-	public ResponseEntity<ApiResponse<List<OrderProduct>>> getByUserIdAndProductId(Long userId, Long productId);
-
 	public ResponseEntity<ApiResponse<List<GetOrders>>> getAllOrders();
 
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrderStatus(OrderStatus status);

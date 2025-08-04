@@ -3,12 +3,10 @@ package com.example.service;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -29,6 +27,7 @@ import com.example.exception.CustomException;
 import com.example.exception.UnAuthorizedException;
 import com.example.exception.UserNotFoundException;
 import com.example.model.Address;
+import com.example.model.OrderProduct;
 import com.example.model.PaymentInfo;
 import com.example.model.PaymentMethod;
 import com.example.model.User;
@@ -151,7 +150,7 @@ public class UserServiceImpl implements UserService{
 	}
 
 	@Transactional
-	public ResponseEntity<ApiResponse<User>> deleteUserById(Long userId) {
+	public ResponseEntity<String> deleteUserById(Long userId) {
 		
 		Optional<User> exists = userRepo.findById(userId);
 		
@@ -167,15 +166,19 @@ public class UserServiceImpl implements UserService{
 			throw new UnAuthorizedException("You Are Not Allowed To Delete Another User");
 		}
 		
-		cartItemRepo.deleteAllByUser(userId);
-		orderItemRepo.deleteAllByOrderId(orderRepo.findById(userId).get().getOrderId());
-		orderRepo.deleteAllByUserId(userId);
-		userTokenRepo.deleteByUserId(userId);
-		addressRepo.deleteAllByUserId(userId);
-		userRepo.deleteById(userId);
-		ApiResponse<User> response = new ApiResponse<>();
-		response.setMessage("User with Role "+exists.get().getUserRole()+" Deleted Successfully");
-		return ResponseEntity.ok(response);
+		cartItemRepo.deleteAllByUser(exists.get().getUserId());
+		 List<OrderProduct> orders = orderRepo.findByUser(exists.get().getUserId());
+		    for (OrderProduct order : orders) {
+		        // Delete order items first
+		        orderItemRepo.deleteAllByOrderId(order.getOrderId());
+		    }
+
+		    // Delete orders
+		orderRepo.deleteAllByUser_UserId(exists.get().getUserId());
+		userTokenRepo.deleteByUserId(exists.get().getUserId());
+		addressRepo.deleteAllByUser_UserId(exists.get().getUserId());
+		userRepo.deleteById(exists.get().getUserId());
+		return ResponseEntity.ok("User with Role "+exists.get().getUserRole()+" Deleted Successfully");
 	}
 
 	public ResponseEntity<ApiResponse<User>> changeUserPassword(String eMail, String currPassword, String newPassword) {

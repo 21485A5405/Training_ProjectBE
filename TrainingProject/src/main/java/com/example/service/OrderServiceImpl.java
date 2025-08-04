@@ -42,99 +42,84 @@ public class OrderServiceImpl implements OrderService {
         this.currentUser = currentUser;
         this.orderItemRepo = orderItemRepo;
     }
-
+    
     @Transactional
     public ResponseEntity<ApiResponse<List<GetOrders>>> placeOrder(List<PlaceOrder> orderDetailsList) {
         User currUser = currentUser.getUser();
-        if (currUser == null) throw new UnAuthorizedException("Please Login");
-
-        List<GetOrders> placedOrderDTOs = new ArrayList<>();
-
-        Map<Long, List<PlaceOrder>> groupedOrders = orderDetailsList.stream()
-            .collect(Collectors.groupingBy(PlaceOrder::getAddressId));
-
-        for (Map.Entry<Long, List<PlaceOrder>> entry : groupedOrders.entrySet()) {
-            Long addressId = entry.getKey();
-            List<PlaceOrder> group = entry.getValue();
-
-            Address address = addressRepo.findById(addressId)
-                .orElseThrow(() -> new CustomException("Address Not Found"));
-
-            if (!address.getUser().getUserId().equals(currUser.getUserId())) {
-                throw new CustomException("Address Not Matched");
-            }
-
-            List<OrderItem> orderItems = new ArrayList<>();
-            double totalPrice = 0;
-
-            OrderProduct order = new OrderProduct();
-            order.setUser(currUser);
-            order.setOrderDate(LocalDateTime.now());
-            order.setShippingAddress(address.getFullAddress());
-            order.setOrderStatus(OrderStatus.PENDING);
-            order.setPaymentStatus(PaymentStatus.PENDING);
-
-            for (PlaceOrder details : group) {
-                Product product = productRepo.findById(details.getProductId())
-                    .orElseThrow(() -> new ProductNotFoundException("Product Not Available"));
-
-                CartItem cartItem = cartItemRepo.findByUserAndProduct(details.getUserId(), details.getProductId())
-                    .orElseThrow(() -> new ProductNotFoundException("Please Add Product into Cart to place Order"));
-
-                if (!currUser.getUserId().equals(details.getUserId())) {
-                    throw new UnAuthorizedException("Not Authorized to Place Order with Another User ID");
-                }
-
-                if (cartItem.getProductQuantity() < details.getQuantity()) {
-                    throw new CustomException("Selected Quantity is Greater Than Your Cart Quantity");
-                }
-
-                List<PaymentInfo> payment = currUser.getPaymentDetails();
-                if (payment == null || payment.isEmpty()) {
-                    throw new CustomException("Payment Method Cannot be Empty");
-                }
-
-                boolean isValid = payment.stream()
-                    .anyMatch(info -> info.getPaymentMethod() == details.getPaymentType());
-
-                if (!isValid) {
-                    throw new UnAuthorizedException("Selected Payment Method Not Available. Available: "
-                        + currUser.displayPayments());
-                }
-
-                int newStock = product.getProductQuantity() - details.getQuantity();
-                if (newStock < 0) throw new CustomException("Out Of Stock.");
-                product.setProductQuantity(newStock);
-                productRepo.save(product);
-
-                int remainingQty = cartItem.getProductQuantity() - details.getQuantity();
-                if (remainingQty <= 0) {
-                    cartItemRepo.delete(cartItem);
-                } else {
-                    cartItem.setProductQuantity(remainingQty);
-                    cartItem.setTotalPrice(remainingQty * product.getProductPrice());
-                    cartItemRepo.save(cartItem);
-                }
-
-                OrderItem orderItem = new OrderItem();
-                orderItem.setOrder(order);
-                orderItem.setProduct(product);
-                orderItem.setQuantity(details.getQuantity());
-
-                orderItems.add(orderItem);
-                totalPrice += details.getQuantity() * product.getProductPrice();
-            }
-
-            order.setItems(orderItems);
-            order.setTotalPrice(totalPrice);
-            orderRepo.save(order);
-
-            placedOrderDTOs.add(new GetOrders(order, orderItems));
+        if (currUser == null) {
+            throw new UnAuthorizedException("Please Login");
         }
 
+        // Ensure managed user entity
+        User managedUser = userRepo.findById(currUser.getUserId())
+            .orElseThrow(() -> new UserNotFoundException("User Not Found"));
+
+        if (orderDetailsList == null || orderDetailsList.isEmpty()) {
+            throw new CustomException("Order list cannot be empty");
+        }
+
+        // 1. Use the first address from the list (assuming single address per order)
+        Address address = addressRepo.findById(orderDetailsList.get(0).getAddressId())
+            .orElseThrow(() -> new CustomException("Address not found with ID: " + orderDetailsList.get(0).getAddressId()));
+
+        // 2. Create the OrderProduct
+        OrderProduct orderProduct = new OrderProduct();
+        orderProduct.setUser(managedUser);
+        orderProduct.setOrderDate(LocalDateTime.now());
+        orderProduct.setOrderStatus(OrderStatus.PENDING);
+        orderProduct.setPaymentStatus(PaymentStatus.PENDING);
+        orderProduct.setShippingAddress(address.getFullAddress());
+
+        double totalOrderPrice = 0.0;
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (PlaceOrder placeOrder : orderDetailsList) {
+            Product product = productRepo.findById(placeOrder.getProductId())
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + placeOrder.getProductId()));
+
+            if (product.getProductQuantity() < placeOrder.getQuantity()) {
+                throw new CustomException("Not enough stock for product: " + product.getProductName());
+            }
+
+            // Create OrderItem
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(orderProduct); // associate to main order
+            orderItem.setProduct(product);
+            orderItem.setQuantity(placeOrder.getQuantity());
+
+            orderItems.add(orderItem);
+
+            // Calculate total
+            totalOrderPrice += product.getProductPrice() * placeOrder.getQuantity();
+
+            // Deduct stock
+            product.setProductQuantity(product.getProductQuantity() - placeOrder.getQuantity());
+            productRepo.save(product);
+            CartItem cart = cartItemRepo.findByUserAndProduct(managedUser.getUserId(), product.getProductId()).orElse(null);
+            if (cart != null) {
+                if (cart.getProductQuantity() == placeOrder.getQuantity()) {
+                    cartItemRepo.delete(cart);
+                } else if (cart.getProductQuantity() > placeOrder.getQuantity()) {
+                    cart.setProductQuantity(cart.getProductQuantity() - placeOrder.getQuantity());
+                    cartItemRepo.save(cart);
+                } else {
+                    throw new CustomException("Cart quantity is less than ordered quantity for product: " + product.getProductName());
+                }
+            }
+        }
+        orderProduct.setTotalPrice(totalOrderPrice);
+
+        // Save main order and items
+        orderRepo.save(orderProduct);
+        orderItemRepo.saveAll(orderItems);
+        
+        // Prepare response
+        GetOrders getOrders = new GetOrders(orderProduct, orderItems);
+        List<GetOrders> orderResponseList = List.of(getOrders);
+
         ApiResponse<List<GetOrders>> response = new ApiResponse<>();
-        response.setData(placedOrderDTOs);
-        response.setMessage("Orders Placed Successfully");
+        response.setMessage("Order placed successfully");
+        response.setData(orderResponseList);
 
         return ResponseEntity.ok(response);
     }
@@ -157,6 +142,7 @@ public class OrderServiceImpl implements OrderService {
             dtoList.add(new GetOrders(order, order.getItems()));
         }
 
+        
         return ResponseEntity.ok(dtoList);
     }
 
@@ -218,22 +204,6 @@ public class OrderServiceImpl implements OrderService {
 
         return ResponseEntity.ok(List.of(new GetOrders(order, order.getItems())));
     }
-    
-	public ResponseEntity<ApiResponse<List<OrderProduct>>> getByUserIdAndProductId(Long userId, Long productId) {
-		
-		User currUser = currentUser.getUser();
-		if(currUser == null) {
-			throw new UnAuthorizedException("Please Login");
-		}
-		ApiResponse<List<OrderProduct>> response = new ApiResponse<>();
-		List<OrderProduct> orders = orderRepo.findAllByUserAndProduct(userId, productId);
-
-		if(orders.isEmpty()) {
-			throw new ProductNotFoundException("Orders Not Found With This UserID "+userId+" and ProductID "+productId);
-		}
-		return ResponseEntity.ok(response);
-	}
-
 
 
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrderStatus(OrderStatus status) {

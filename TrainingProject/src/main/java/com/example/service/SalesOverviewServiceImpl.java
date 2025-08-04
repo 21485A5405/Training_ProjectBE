@@ -96,4 +96,16 @@ public class SalesOverviewServiceImpl implements SalesOverviewService {
                 .count();
     }
 
+    public Map<String, Double> getRevenuePerDay() {
+        ensureAdminAccess();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        return orderRepo.findAll().stream()
+                .collect(Collectors.groupingBy(
+                        o -> o.getOrderDate().format(formatter),
+                        TreeMap::new,
+                        Collectors.summingDouble(OrderProduct::getTotalPrice)
+                ));
+    }
+
 }

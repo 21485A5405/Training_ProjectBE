@@ -1,5 +1,6 @@
 package com.example.model;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.example.enums.OrderStatus;
@@ -35,7 +36,7 @@ public class OrderProduct {
     private LocalDateTime orderDate;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> orderItems;
+    private List<OrderItem> orderItems = new ArrayList<>();;
     
 	private double totalPrice;
 	
@@ -63,7 +64,11 @@ public class OrderProduct {
 		return orderItems;
 	}
 
-	public void setItems(List<OrderItem> orderItems) {
+	public List<OrderItem> getOrderItems() {
+		return orderItems;
+	}
+
+	public void setOrderItems(List<OrderItem> orderItems) {
 		this.orderItems = orderItems;
 	}
 

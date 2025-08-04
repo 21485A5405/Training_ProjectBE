@@ -177,51 +177,6 @@ public class CartItemServiceImpl implements CartItemService{
 		return ResponseEntity.ok(response);
 	}
 
-	@Transactional
-	public ResponseEntity<ApiResponse<CartItem>> updateCart(Long userId, Long productId, int newQuantity) {
-		
-		Optional<CartItem> exists = cartItemRepo.findByUserAndProduct(userId, productId);
-		Optional<Product> p = productRepo.findById(productId);
-		Optional<User> u = userRepo.findById(userId);
-		
-		User currUser = currentUser.getUser();
-		if(currUser == null) {
-			throw new UnAuthorizedException("Please Login");
-		}if(!u.isPresent()) {
-			throw new UserNotFoundException("User Not Found");
-		}
-		if(currUser.getUserId()!= userId) {
-			throw new UnAuthorizedException("User Not Authorized to Add Product Into Another Account");
-		}
-		if(!p.isPresent()) {
-			throw new ProductNotFoundException("Product Not Found to Add to Cart");
-		}
-		Product product =p.get();
-		if(product.getProductQuantity() == 0) {
-			throw new CustomException("Product Out Of Stock");
-		}
-		if(newQuantity <=0) {
-			throw new CustomException("Quantity Cannot be Less than Zero");
-		}
-		
-		if(product.getProductQuantity()<newQuantity) {
-			
-			throw new CustomException("Enough Quantity Selected , We have "
-					+product.getProductQuantity()+" Items available. Please Selcct Under "
-							+product.getProductQuantity()+" as Quantity");
-		}
-		CartItem cartItem = null;
-		if(exists.isPresent()) { // update Existing quantity 
-			cartItem = exists.get();
-			cartItem.setProductQuantity(exists.get().getProductQuantity()+1);
-			cartItem.setTotalPrice(newQuantity*product.getProductPrice());
-		}
-		ApiResponse<CartItem> response = new ApiResponse<>();
-		response.setData(cartItem);
-		response.setMessage("CartItems Updated Successfully");
-		return ResponseEntity.ok(response);
-	}
-
 	public ResponseEntity<ApiResponse<CartItem>> increaseCart(Long userId, Long productId) {
 		Optional<CartItem> cart = cartItemRepo.findByUserAndProduct(userId, productId);
 		Optional<Product> p = productRepo.findById(productId);

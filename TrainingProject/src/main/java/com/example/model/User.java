@@ -4,7 +4,7 @@ import java.util.List;
 import com.example.enums.Role;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-	
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.ElementCollection;
@@ -32,7 +32,7 @@ public class User {
 	@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
 	private String userPassword;
 
-	@OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
+	@OneToMany(mappedBy = "user", fetch = FetchType.EAGER,cascade = CascadeType.ALL,orphanRemoval = true)
 	private List<Address> shippingAddress;
 
     @ElementCollection(fetch = FetchType.EAGER)
@@ -43,7 +43,8 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role userRole;
     
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "user", orphanRemoval = true)
+    @JsonIgnore
     private List<UserToken> tokens;
 
 	
@@ -52,6 +53,7 @@ public class User {
 	private List<CartItem> cartItems;
 	
 	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+	@JsonIgnore
 	private List<OrderProduct> orders;
 
 	public List<CartItem> getCartItems() {
@@ -75,6 +77,22 @@ public class User {
 	public String getUserName() {
 		return userName;
 	}
+	public List<UserToken> getTokens() {
+		return tokens;
+	}
+
+	public void setTokens(List<UserToken> tokens) {
+		this.tokens = tokens;
+	}
+
+	public List<OrderProduct> getOrders() {
+		return orders;
+	}
+
+	public void setOrders(List<OrderProduct> orders) {
+		this.orders = orders;
+	}
+
 	public void setUserName(String userName) {
 		this.userName = userName;
 	}

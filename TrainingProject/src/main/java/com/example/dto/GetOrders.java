@@ -42,7 +42,11 @@ public class GetOrders {
             .toList();
     }
 
-    public static class ProductInfo {
+    public GetOrders() {
+		// TODO Auto-generated constructor stub
+	}
+
+	public static class ProductInfo {
         private Long productId;
         private String productName;
         private double productPrice;

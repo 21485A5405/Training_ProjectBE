@@ -15,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
 import com.example.authentication.CurrentUser;
-import com.example.controller.ApiResponse;
 import com.example.enums.Role;
 import com.example.exception.UnAuthorizedException;
 import com.example.exception.UserNotFoundException;
@@ -52,13 +51,13 @@ public class UserServiceTest {
 	    when(currentUser.getUser()).thenReturn(current);
 	    when(userRepo.findById(1L)).thenReturn(Optional.of(target));
 
-	    ResponseEntity<ApiResponse<User>> response = userService.deleteUserById(1L);
+	    ResponseEntity<String> response = userService.deleteUserById(1L);
 
-	    assertEquals("User Deleted Successfully", response.getBody().getMessage());
+	    assertEquals("User Deleted Successfully", response.getBody());
 	    verify(cartItemRepo).deleteAllByUser(1L);
-	    verify(orderRepo).deleteAllByUserId(1L);
+	    verify(orderRepo).deleteAllByUser_UserId(1L);
 	    verify(userTokenRepo).deleteByUserId(1L);
-	    verify(addressRepo).deleteAllByUserId(1L);
+	    verify(addressRepo).deleteAllByUser_UserId(1L);
 	    verify(userRepo).deleteById(1L);
 	}
 

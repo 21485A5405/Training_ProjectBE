@@ -30,11 +30,6 @@ public class CartItemController {
 		return cartItemService.addProductToCart(userId,productId);
 	}
 	
-	@GetMapping("/get-by-user-and-product/{userId}/{productId}")
-	public ResponseEntity<ApiResponse<CartItem>> getCartItems(@PathVariable Long userId, @PathVariable Long productId) {
-		return cartItemService.getCartItems(userId, productId);
-	}
-	
 	@GetMapping("/get-all-by-user/{userId}")
 	public ResponseEntity<ApiResponse<List<CartItem>>> getItemsByUserId(@PathVariable Long userId) {
 		return cartItemService.getItemsByUserId(userId);

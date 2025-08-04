@@ -25,7 +25,7 @@ public interface UserService {
 
 	public ResponseEntity<ApiResponse<User>> getUserById(Long userId);
 
-	public ResponseEntity<ApiResponse<User>> deleteUserById(Long userId);
+	public ResponseEntity<String> deleteUserById(Long userId);
 	
 	public ResponseEntity<ApiResponse<User>> changeUserPassword(String eMail, String currPassword, String newPassword);
 

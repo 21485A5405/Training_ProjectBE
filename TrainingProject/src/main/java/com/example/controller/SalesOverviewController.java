@@ -50,5 +50,10 @@ public class SalesOverviewController {
         long count = salesOverviewService.getCancelledOrdersCount();
         return ResponseEntity.ok(count);
     }
+    
+    @GetMapping("/daily-revenue")
+    public Map<String, Double> getRevenuePerDay() {
+        return salesOverviewService.getRevenuePerDay();
+    }
 }
 

@@ -1,7 +1,5 @@
 package com.example.controller;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -49,7 +47,7 @@ public class AdminController {
 		return adminService.getAdminById(adminId);
 	}
 	
-	@GetMapping("/get-all-admins")
+	@GetMapping("/get-all-users")
 	@ForUser(requiredRole = Role.ADMIN, isSelfUser = false)
 	public ResponseEntity<ApiResponse<List<User>>> getAdmin() {
 		return adminService.getAllAdmins();
@@ -59,35 +57,6 @@ public class AdminController {
 	@ForUser(requiredRole = Role.ADMIN, isSelfUser = false)
 	public List<Long> getUsers() {
 		return adminService.getAllUserIds();
-	}
-	
-	@GetMapping("/get-all-products")
-	@ForProduct(requiredRole = Role.ADMIN)
-	public ResponseEntity<ApiResponse<List<Product>>> getAllProducts() {
-		return adminService.getAllProducts();
-	}
-	
-	@GetMapping("/get-all-users")
-	@ForUser(requiredRole = Role.ADMIN, isSelfUser = false)
-	public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
-		return adminService.getAllUsers();
-	}
-	
-	@GetMapping("/get-all-productsbyid")
-	@ForProduct(requiredRole = Role.ADMIN)
-	public List<Long> getProducts() {
-		return adminService.getAllProductIds();
-	}
-
-	@DeleteMapping("/delete-adminbyid/{adminId}")
-	public ResponseEntity<ApiResponse<User>> deleteAdmin(@PathVariable Long adminId) {
-		return adminService.deleteAdminById(adminId);
-	}
-	
-	@GetMapping("/get-all-orders")
-	@ForOrders(requiredRole = Role.ADMIN)
-	public ResponseEntity<ApiResponse<List<OrderProduct>>> getAll() {
-		return adminService.getAllOrders();
 	}
 	
 	@PostMapping("/login-admin")
