@@ -11,10 +11,16 @@ public interface SalesOverviewService {
     Map<String, Long> getOrderCountPerDay(); 
     
     Map<Long, Long> getTopSellingProducts();
-	
+    
     long getShippedOrdersCount();
 	
+    long getDeliveredOrdersCount();
+    
+    public long getTodayOrdersCount();
+    
     long getCancelledOrdersCount();
 	
     Map<String, Double> getRevenuePerDay();
+
+	long getRefundedOrdersCount();
 }

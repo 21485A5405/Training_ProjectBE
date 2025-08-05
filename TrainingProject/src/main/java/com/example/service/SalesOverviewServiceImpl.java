@@ -5,9 +5,12 @@ import com.example.model.OrderItem;
 import com.example.model.OrderProduct;
 import com.example.model.User;
 import com.example.repo.OrderRepo; // adjust this to your actual package
+import com.example.repo.UserRepo;
+
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,12 +33,15 @@ public class SalesOverviewServiceImpl implements SalesOverviewService {
             throw new SecurityException("Access denied: Admins only");
         }
     }
-
-    @Override
+    
     public double getTotalRevenue() {
         ensureAdminAccess();
         List<OrderProduct> orders = orderRepo.findAll();
         return orders.stream()
+                .filter(order -> {
+                    String status = order.getOrderStatus().name();
+                    return !(status.equalsIgnoreCase("CANCELLED") || status.equalsIgnoreCase("REFUNDED"));
+                })
                 .mapToDouble(OrderProduct::getTotalPrice)
                 .sum();
     }
@@ -81,15 +87,30 @@ public class SalesOverviewServiceImpl implements SalesOverviewService {
                 ));
     }
     
+    public long getTodayOrdersCount() {
+        ensureAdminAccess();
+        return orderRepo.findAll().stream()
+                .filter(order -> order.getOrderDate().toLocalDate().isEqual(LocalDate.now()))
+                .count();
+    }
+
+
+    
     public long getShippedOrdersCount() {
     	ensureAdminAccess();
         return orderRepo.findAll().stream()
                 .filter(o -> o.getOrderStatus().name().equalsIgnoreCase("SHIPPED"))
                 .count();
     }
+    
+    public long getDeliveredOrdersCount() {
+    	ensureAdminAccess();
+        return orderRepo.findAll().stream()
+                .filter(o -> o.getOrderStatus().name().equalsIgnoreCase("DELIVERED"))
+                .count();
+    }
 
     public long getCancelledOrdersCount() {
-    	System.out.println("hi");
     	ensureAdminAccess();
         return orderRepo.findAll().stream()
                 .filter(o -> o.getOrderStatus().name().equalsIgnoreCase("CANCELLED"))
@@ -107,5 +128,12 @@ public class SalesOverviewServiceImpl implements SalesOverviewService {
                         Collectors.summingDouble(OrderProduct::getTotalPrice)
                 ));
     }
+
+	public long getRefundedOrdersCount() {
+		ensureAdminAccess();
+        return orderRepo.findAll().stream()
+                .filter(o -> o.getOrderStatus().name().equalsIgnoreCase("RETURNED"))
+                .count();
+	}
 
 }

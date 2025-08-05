@@ -45,9 +45,28 @@ public class SalesOverviewController {
         return ResponseEntity.ok(count);
     }
 
+    @GetMapping("/orders-count/DELIVERED")
+    public ResponseEntity<Long> getDeliveredCount() {
+        long count = salesOverviewService.getDeliveredOrdersCount();
+        return ResponseEntity.ok(count);
+    }
+    
+    @GetMapping("/orders-today-count")
+    public ResponseEntity<Long> getTodayOrdersCount() {
+        long count = salesOverviewService.getTodayOrdersCount();
+        return ResponseEntity.ok(count);
+    }
+    
+    
     @GetMapping("/orders-count/CANCELLED")
     public ResponseEntity<Long> getCancelledCount() {
         long count = salesOverviewService.getCancelledOrdersCount();
+        return ResponseEntity.ok(count);
+    }
+    
+    @GetMapping("/orders-count/RETURNED")
+    public ResponseEntity<Long> getRefundedCount() {
+        long count = salesOverviewService.getRefundedOrdersCount();
         return ResponseEntity.ok(count);
     }
     
