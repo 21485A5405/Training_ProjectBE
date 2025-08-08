@@ -134,7 +134,7 @@ public class OrderServiceImpl implements OrderService {
 
         List<OrderProduct> orders = orderRepo.findByUser(userId);
         if (orders.isEmpty()) {
-            throw new UserNotFoundException("No Order Details Found with Given User ID");
+            return ResponseEntity.ok(new ArrayList<GetOrders>());
         }
 
         List<GetOrders> dtoList = new ArrayList<>();

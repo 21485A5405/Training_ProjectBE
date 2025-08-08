@@ -136,15 +136,17 @@ public class CartItemServiceImpl implements CartItemService{
 		if(currUser == null) {
 			throw new UnAuthorizedException("Please Login");
 		}
+		ApiResponse<List<CartItem>> response = new ApiResponse<>();
 		if(currUser.getUserId()!= userId) {
 			throw new UnAuthorizedException("Not Authorized To See Another User Cart Details");
 		}
 		List<CartItem> cartItems = cartItemRepo.findByUserId(userId);
 		if(cartItems.isEmpty()) {
-			throw new UserNotFoundException("User Cart Is empty");
+			response.setData(cartItems);
+			response.setMessage("User Cart Is empty");
+			return ResponseEntity.ok(response);
 		}
 		
-		ApiResponse<List<CartItem>> response = new ApiResponse<>();
 		response.setData(cartItems);
 		response.setMessage("CartItem of User"+userId);
 		return ResponseEntity.ok(response);

@@ -4,8 +4,7 @@ import com.example.authentication.CurrentUser;
 import com.example.model.OrderItem;
 import com.example.model.OrderProduct;
 import com.example.model.User;
-import com.example.repo.OrderRepo; // adjust this to your actual package
-import com.example.repo.UserRepo;
+import com.example.repo.OrderRepo;
 
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -46,13 +45,11 @@ public class SalesOverviewServiceImpl implements SalesOverviewService {
                 .sum();
     }
 
-    @Override
     public long getTotalOrders() {
         ensureAdminAccess();
         return orderRepo.count();
     }
 
-    @Override
     public Map<String, Long> getOrderCountPerDay() {
         ensureAdminAccess();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -63,7 +60,6 @@ public class SalesOverviewServiceImpl implements SalesOverviewService {
                 ));
     }
 
-    @Override
     public Map<Long, Long> getTopSellingProducts() {
         ensureAdminAccess();
         List<OrderProduct> orders = orderRepo.findAll();
