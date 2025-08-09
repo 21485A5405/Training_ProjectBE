@@ -257,11 +257,9 @@ public class UserServiceImpl implements UserService{
 		return ResponseEntity.ok(response);
 	}
 
-	@Override
-	public ResponseEntity<String> logOut() {
+	public ResponseEntity<String> logOut(String userToken) {
 		
-		User currUser = currentUser.getUser();
-		userTokenRepo.deleteByUserId(currUser.getUserId());
+		userTokenRepo.deleteByUserToken(userToken);
 		return ResponseEntity.ok("LogOut Successfully");
 	}
 

@@ -158,10 +158,6 @@ public class OrderServiceImpl implements OrderService {
             throw new UnAuthorizedException("Not Authorized to Cancel This Order");
         }
 
-        if (order.getOrderStatus() == OrderStatus.DELIVERED) {
-            throw new CustomException("Order is Delivered");
-        }
-
         for (OrderItem item : order.getItems()) {
             Product product = item.getProduct();
             product.setProductQuantity(product.getProductQuantity() + item.getQuantity());

@@ -33,7 +33,7 @@ public interface UserService {
 
 	public ResponseEntity<ApiResponse<User>> updateUserRole(Long userId);
 
-	public ResponseEntity<String> logOut();
+	public ResponseEntity<String> logOut(String userToken);
 
 	public ResponseEntity<String> addAddress(Address address);
 

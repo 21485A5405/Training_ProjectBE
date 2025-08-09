@@ -126,8 +126,8 @@ public class UserController {
 		return userService.addPayment(userId, paymentDetails);
 	}
 	
-	@DeleteMapping("/logout-user")
-	public ResponseEntity<String> logOut() {
-		return userService.logOut();
+	@DeleteMapping("/logout-user/{userToken}")
+	public ResponseEntity<String> logOut(@PathVariable String userToken) {
+		return userService.logOut(userToken);
 	}
 }
