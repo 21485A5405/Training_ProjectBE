@@ -48,7 +48,6 @@ public class OrderServiceImpl implements OrderService {
             throw new UnAuthorizedException("Please Login");
         }
 
-        
         User managedUser = userRepo.findById(currUser.getUserId())
             .orElseThrow(() -> new UserNotFoundException("User Not Found"));
 
@@ -56,16 +55,26 @@ public class OrderServiceImpl implements OrderService {
             throw new CustomException("Order list cannot be empty");
         }
 
-        
         Address address = addressRepo.findById(orderDetailsList.get(0).getAddressId())
             .orElseThrow(() -> new CustomException("Address not found with ID: " + orderDetailsList.get(0).getAddressId()));
 
-        
         OrderProduct orderProduct = new OrderProduct();
         orderProduct.setUser(managedUser);
         orderProduct.setOrderDate(LocalDateTime.now());
         orderProduct.setOrderStatus(OrderStatus.PENDING);
-        orderProduct.setPaymentStatus(PaymentStatus.PENDING);
+        
+        PaymentStatus paymentStatus = PaymentStatus.PENDING;
+        PlaceOrder firstOrder = orderDetailsList.get(0); 
+        
+        if (firstOrder.getPaymentOption() != null) {
+            if ("PAY_NOW".equalsIgnoreCase(firstOrder.getPaymentOption())) {
+                paymentStatus = PaymentStatus.PAID;
+            } else if ("CASH_ON_DELIVERY".equalsIgnoreCase(firstOrder.getPaymentOption())) {
+                paymentStatus = PaymentStatus.PENDING;
+            }
+        }
+        
+        orderProduct.setPaymentStatus(paymentStatus);
         orderProduct.setShippingAddress(address.getFullAddress());
 
         double totalOrderPrice = 0.0;
@@ -79,7 +88,6 @@ public class OrderServiceImpl implements OrderService {
                 throw new CustomException("Not enough stock for product: " + product.getProductName());
             }
 
-            
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(orderProduct); 
             orderItem.setProduct(product);
@@ -87,12 +95,11 @@ public class OrderServiceImpl implements OrderService {
 
             orderItems.add(orderItem);
 
-            
             totalOrderPrice += product.getProductPrice() * placeOrder.getQuantity();
 
-            
             product.setProductQuantity(product.getProductQuantity() - placeOrder.getQuantity());
             productRepo.save(product);
+            
             CartItem cart = cartItemRepo.findByUserAndProduct(managedUser.getUserId(), product.getProductId()).orElse(null);
             if (cart != null) {
                 if (cart.getProductQuantity() == placeOrder.getQuantity()) {
@@ -107,10 +114,8 @@ public class OrderServiceImpl implements OrderService {
         }
         orderProduct.setTotalPrice(totalOrderPrice);
 
-        
         orderRepo.save(orderProduct);
         orderItemRepo.saveAll(orderItems);
-        
         
         GetOrders getOrders = new GetOrders(orderProduct, orderItems);
         List<GetOrders> orderResponseList = List.of(getOrders);
