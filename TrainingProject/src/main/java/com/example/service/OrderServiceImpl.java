@@ -1,9 +1,7 @@
-
 package com.example.service;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -50,7 +48,7 @@ public class OrderServiceImpl implements OrderService {
             throw new UnAuthorizedException("Please Login");
         }
 
-        // Ensure managed user entity
+        
         User managedUser = userRepo.findById(currUser.getUserId())
             .orElseThrow(() -> new UserNotFoundException("User Not Found"));
 
@@ -58,11 +56,11 @@ public class OrderServiceImpl implements OrderService {
             throw new CustomException("Order list cannot be empty");
         }
 
-        // 1. Use the first address from the list (assuming single address per order)
+        
         Address address = addressRepo.findById(orderDetailsList.get(0).getAddressId())
             .orElseThrow(() -> new CustomException("Address not found with ID: " + orderDetailsList.get(0).getAddressId()));
 
-        // 2. Create the OrderProduct
+        
         OrderProduct orderProduct = new OrderProduct();
         orderProduct.setUser(managedUser);
         orderProduct.setOrderDate(LocalDateTime.now());
@@ -81,18 +79,18 @@ public class OrderServiceImpl implements OrderService {
                 throw new CustomException("Not enough stock for product: " + product.getProductName());
             }
 
-            // Create OrderItem
+            
             OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(orderProduct); // associate to main order
+            orderItem.setOrder(orderProduct); 
             orderItem.setProduct(product);
             orderItem.setQuantity(placeOrder.getQuantity());
 
             orderItems.add(orderItem);
 
-            // Calculate total
+            
             totalOrderPrice += product.getProductPrice() * placeOrder.getQuantity();
 
-            // Deduct stock
+            
             product.setProductQuantity(product.getProductQuantity() - placeOrder.getQuantity());
             productRepo.save(product);
             CartItem cart = cartItemRepo.findByUserAndProduct(managedUser.getUserId(), product.getProductId()).orElse(null);
@@ -109,11 +107,11 @@ public class OrderServiceImpl implements OrderService {
         }
         orderProduct.setTotalPrice(totalOrderPrice);
 
-        // Save main order and items
+        
         orderRepo.save(orderProduct);
         orderItemRepo.saveAll(orderItems);
         
-        // Prepare response
+        
         GetOrders getOrders = new GetOrders(orderProduct, orderItems);
         List<GetOrders> orderResponseList = List.of(getOrders);
 
@@ -171,6 +169,35 @@ public class OrderServiceImpl implements OrderService {
 
         ApiResponse<OrderProduct> response = new ApiResponse<>();
         response.setMessage("Order cancelled successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Transactional
+    public ResponseEntity<ApiResponse<OrderProduct>> returnProduct(Long orderId) {
+    	User currUser = currentUser.getUser();
+        if (currUser == null) throw new UnAuthorizedException("Please Login");
+
+        OrderProduct order = orderRepo.findById(orderId)
+            .orElseThrow(() -> new CustomException("Order Not Found"));
+
+        if (!order.getUser().getUserId().equals(currUser.getUserId())) {
+            throw new UnAuthorizedException("Not Authorized to Cancel This Order");
+        }
+
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            product.setProductQuantity(product.getProductQuantity() + item.getQuantity());
+            productRepo.save(product);
+        }
+
+        order.setOrderStatus(OrderStatus.RETURNED);
+        order.setOrderDate(LocalDateTime.now());
+        order.setPaymentStatus(PaymentStatus.REFUND_INITIATED);
+        orderRepo.save(order);
+
+        ApiResponse<OrderProduct> response = new ApiResponse<>();
+        response.setMessage("Order Returned successfully");
 
         return ResponseEntity.ok(response);
     }
@@ -252,4 +279,4 @@ public class OrderServiceImpl implements OrderService {
 		return ResponseEntity.ok(response);
 	}
 
-}
+} 

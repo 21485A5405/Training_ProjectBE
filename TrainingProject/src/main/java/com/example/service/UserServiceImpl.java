@@ -272,7 +272,6 @@ public class UserServiceImpl implements UserService{
 	    newUser.setShippingAddress(newUser.getShippingAddress());
 	    addressRepo.save(address);
 		return ResponseEntity.ok("Address Added Successfully");
-		
 	}
 
 	@Transactional

@@ -35,6 +35,7 @@ public class OrderController {
 	public ResponseEntity<OrderStatus[]> getOrderStatus() {
 		return ResponseEntity.ok(OrderStatus.values());
 	}
+	
 	@PostMapping("/place-order")
 	public ResponseEntity<ApiResponse<List<GetOrders>>> placeOrder(@RequestBody List<PlaceOrder> orderDetails) {
 		return orderService.placeOrder(orderDetails);	
@@ -89,4 +90,9 @@ public class OrderController {
 	public ResponseEntity<ApiResponse<OrderProduct>> cancelOrder(@PathVariable Long orderId) {
 		return orderService.cancelOrder(orderId);
 	}
-}
+	
+	@PostMapping("/return-product/{orderId}")
+	public ResponseEntity<ApiResponse<OrderProduct>> returnProduct(@PathVariable Long orderId) {
+		return orderService.returnProduct(orderId);
+	}
+} 

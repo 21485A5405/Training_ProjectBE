@@ -34,7 +34,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     		String path = request.getRequestURI();
  
           
-    		if (path.equals("/users/register-user") || path.equals("/orders/get-payments")||
+    		if (path.equals("/users/register-user") || path.equals("/orders/**")||
     				path.equals("/orders/get-orderstatus") 
     				|| path.equals("/users/get-payment-details") || path.equals("/products/getall") 
     				|| path.equals("/users/login-user") || path.equals("/admins/login-admin")) {
