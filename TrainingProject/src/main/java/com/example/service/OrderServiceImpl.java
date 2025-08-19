@@ -233,7 +233,6 @@ public class OrderServiceImpl implements OrderService {
         return ResponseEntity.ok(List.of(new GetOrders(order, order.getItems())));
     }
 
-
 	public ResponseEntity<ApiResponse<List<OrderProduct>>> getOrderStatus(OrderStatus status) {
 		
 		List<OrderProduct> orders = orderRepo.findAllByOrderStatus(status);
@@ -270,7 +269,6 @@ public class OrderServiceImpl implements OrderService {
 		response.setMessage(" Order Status for"+" Order ID "+orderExists.get().getOrderId() +" Updated Sucessfully");
 		return ResponseEntity.ok(response);
 	}
-
 
 	public ResponseEntity<ApiResponse<OrderProduct>> updatePaymentStatus(Long orderId, PaymentStatus status) {
 		

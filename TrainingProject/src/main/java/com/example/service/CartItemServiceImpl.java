@@ -138,6 +138,7 @@ public class CartItemServiceImpl implements CartItemService{
 		}
 		ApiResponse<List<CartItem>> response = new ApiResponse<>();
 		if(currUser.getUserId()!= userId) {
+			
 			throw new UnAuthorizedException("Not Authorized To See Another User Cart Details");
 		}
 		List<CartItem> cartItems = cartItemRepo.findByUserId(userId);

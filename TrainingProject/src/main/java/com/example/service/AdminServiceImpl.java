@@ -88,6 +88,7 @@ public class AdminServiceImpl implements AdminService{
 			throw new AdminNotFoundException("Admin Not Found");
 		}
 		if(currUser.getUserRole()!=Role.ADMIN) {
+			
 			throw new CustomException("User Dont Have Access to See Admin Details");
 		}
 		

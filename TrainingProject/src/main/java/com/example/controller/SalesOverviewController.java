@@ -287,12 +287,6 @@ public class SalesOverviewController {
         }
     }
 
-    
-
-    /**
-     * Track a new visitor
-     * TODO: Implement actual visitor tracking in database
-     */
     @PostMapping("/track-visitor")
     public ResponseEntity<Map<String, String>> trackVisitor(@RequestBody Map<String, Object> visitorData) {
         try {
@@ -310,10 +304,6 @@ public class SalesOverviewController {
         }
     }
 
-    /**
-     * Track a page view
-     * TODO: Implement actual page view tracking in database
-     */
     @PostMapping("/track-page-view")
     public ResponseEntity<Map<String, String>> trackPageView(@RequestBody Map<String, Object> pageViewData) {
         try {
